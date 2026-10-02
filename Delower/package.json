@@ -1,0 +1,19 @@
+{
+  "name": "dhaka-tesla-pool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dhaka Tesla Pool - Share a seat. Split the fare. Survive Dhaka traffic.",
+  "scripts": {
+    "dev": "npm run dev --prefix backend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "test": "npm run test --prefix backend",
+    "test:concurrency": "npm run test:concurrency --prefix backend",
+    "db:seed": "npm run db:seed --prefix backend",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down"
+  },
+  "keywords": ["ride-pooling", "nextjs", "nodejs", "dhaka", "tesla-pool"],
+  "author": "Chief Tesla Engineer",
+  "license": "ISC"
+}

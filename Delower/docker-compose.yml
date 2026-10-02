@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  # 1. Node.js Backend API Service (with embedded SQLite engine)
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dhaka_tesla_api
+    restart: unless-stopped
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      DATABASE_URL: "file:./dev.db"
+      JWT_SECRET: ${JWT_SECRET:-super_secret_dhaka_tesla_key_never_share_in_production_90fps}
+    ports:
+      - "5000:5000"
+    volumes:
+      - backend_data:/app/prisma
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # 2. Next.js Frontend Presentation Layer
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: dhaka_tesla_frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:5000/api
+      PORT: 3000
+    ports:
+      - "3000:3000"
+
+volumes:
+  backend_data:
+    driver: local

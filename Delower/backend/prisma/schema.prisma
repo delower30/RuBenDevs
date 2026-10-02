@@ -1,0 +1,129 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String        @id @default(uuid())
+  fullName     String
+  email        String        @unique
+  passwordHash String
+  phone        String
+  role         String        // "DRIVER" | "PASSENGER" | "ADMIN"
+  createdAt    DateTime      @default(now())
+
+  vehicles     Vehicle[]
+  pools        Pool[]
+  rideRequests RideRequest[]
+  memberships  PoolMembership[]
+  wallet       Wallet?
+  auditEvents  AuditEvent[]
+}
+
+model Vehicle {
+  id           String   @id @default(uuid())
+  driverId     String
+  name         String   @default("Bullet")
+  model        String   @default("Electric Rickshaw Tesla (3-Wheeler)")
+  licensePlate String   @unique
+  capacity     Int      @default(3) // Strict 3-seat physical limit
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  driver       User     @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  pools        Pool[]
+}
+
+model Pool {
+  id              String           @id @default(uuid())
+  vehicleId       String
+  driverId        String
+  currentZone     String           // e.g. "Banani"
+  destinationZone String?          // e.g. "Mohakhali" or "Gulshan 1"
+  maxCapacity     Int              @default(3)
+  occupiedSeats   Int              @default(0)
+  status          String           @default("OPEN") // "OPEN" | "DISPATCHED" | "IN_TRANSIT" | "CLOSED"
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  vehicle         Vehicle          @relation(fields: [vehicleId], references: [id])
+  driver          User             @relation(fields: [driverId], references: [id])
+  memberships     PoolMembership[]
+}
+
+model RideRequest {
+  id                 String          @id @default(uuid())
+  passengerId        String
+  pickupZone         String
+  destinationZone    String
+  requestedSeats     Int             @default(1)
+  baseFarePoysha     Int             @default(3000) // ৳30.00 in integer poysha
+  distanceFarePoysha Int             @default(0)
+  discountPoysha     Int             @default(0)
+  totalFarePoysha    Int             @default(3000)
+  status             String          @default("REQUESTED") // "REQUESTED" | "MATCHED" | "DRIVER_ARRIVED" | "STARTED" | "COMPLETED" | "CANCELLED"
+  idempotencyKey     String?         @unique
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  passenger          User            @relation(fields: [passengerId], references: [id])
+  membership         PoolMembership?
+  transactions       WalletTransaction[]
+}
+
+model PoolMembership {
+  id                String      @id @default(uuid())
+  poolId            String
+  rideRequestId     String      @unique
+  passengerId       String
+  seatsAllocated    Int         @default(1)
+  fareChargedPoysha Int
+  joinedAt          DateTime    @default(now())
+  droppedAt         DateTime?
+
+  pool              Pool        @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  rideRequest       RideRequest @relation(fields: [rideRequestId], references: [id], onDelete: Cascade)
+  passenger         User        @relation(fields: [passengerId], references: [id])
+}
+
+model Wallet {
+  id            String              @id @default(uuid())
+  userId        String              @unique
+  balancePoysha Int                 @default(100000) // ৳1,000.00 (100,000 poysha)
+  currency      String              @default("BDT")
+  updatedAt     DateTime            @updatedAt
+
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions  WalletTransaction[]
+}
+
+model WalletTransaction {
+  id              String       @id @default(uuid())
+  walletId        String
+  rideRequestId   String?
+  amountPoysha    Int          // Negative for debit, positive for credit
+  transactionType String       // "DEPOSIT" | "HOLD" | "RIDE_PAYMENT" | "REFUND" | "DRIVER_PAYOUT"
+  description     String
+  createdAt       DateTime     @default(now())
+
+  wallet          Wallet       @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  rideRequest     RideRequest? @relation(fields: [rideRequestId], references: [id])
+}
+
+model AuditEvent {
+  id            String   @id @default(uuid())
+  entityName    String   // "RIDE_REQUEST" | "POOL" | "WALLET"
+  entityId      String
+  actorId       String?
+  eventType     String   // "STATE_CHANGE" | "CAPACITY_LOCK" | "FARE_SPLIT"
+  previousState String?
+  newState      String?
+  metadata      String?  // JSON string
+  createdAt     DateTime @default(now())
+
+  actor         User?    @relation(fields: [actorId], references: [id])
+}

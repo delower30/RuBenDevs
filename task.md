@@ -78,3 +78,4 @@ This task plan executes systematic UI/UX refinements across all screens, enforci
   - [x] Integrated real-time fleet stationing badge with 1-tap "Set Pickup" synchronization in `PassengerPortal.tsx`.
   - [x] Enforced single-pool invariant in `driver.ts` to automatically prune duplicate zombie pools from test runs.
   - [x] 100% test pass rate across all 7 Vitest suites and 0 TypeScript compilation errors.
+Passenger authentication started
